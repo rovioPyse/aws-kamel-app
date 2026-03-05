@@ -1,0 +1,48 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: App stack wiring for Lambda services.
+
+Resources:
+  LatestStateWriterFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: makefile
+    Properties:
+      CodeUri: ../services/lambdas/latest-state-writer/
+      Handler: bootstrap
+      Runtime: provided.al2
+      Architectures:
+        - x86_64
+      Timeout: 30
+      MemorySize: 256
+      Environment:
+        Variables:
+          APP_NAME: latest-state-writer
+
+  AlarmProcessorFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: makefile
+    Properties:
+      CodeUri: ../services/lambdas/alarm-processor/
+      Handler: bootstrap
+      Runtime: provided.al2
+      Architectures:
+        - x86_64
+      Timeout: 30
+      MemorySize: 256
+      Environment:
+        Variables:
+          APP_NAME: alarm-processor
+      Events:
+        EveryFiveMinutes:
+          Type: Schedule
+          Properties:
+            Schedule: rate(5 minutes)
+            Enabled: true
+
+Outputs:
+  LatestStateWriterFunctionArn:
+    Value: !GetAtt LatestStateWriterFunction.Arn
+  AlarmProcessorFunctionArn:
+    Value: !GetAtt AlarmProcessorFunction.Arn
