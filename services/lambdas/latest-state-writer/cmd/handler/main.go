@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 
-	"aws-kamel-app/services/lambdas/latest-state-writer/internal/processor"
+	"latest-state-writer/internal/processor"
 	"github.com/aws/aws-lambda-go/lambda"
 )
 

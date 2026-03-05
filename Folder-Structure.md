@@ -62,12 +62,21 @@ apps-repo/
   go.mod
   go.sum
 
-  deploy/                           # App deployment wiring (SAM stack)
-    template.yaml                   # defines functions, schedules, permissions, wiring
-    samconfig.toml                  # env profiles (dev/prod)
-    params/                         # env params (optional)
-      dev.json
-      prod.json
+  deploy/                           # Deployment wiring (can support multiple deployment methods/apps)
+    sam/                            # SAM-based apps (current)
+      <app-name-1>/
+        template.yaml               # functions, schedules, permissions, wiring
+        samconfig.toml              # env profiles (dev/prod)
+        params/                     # env params (optional)
+          dev.json
+          prod.json
+      <app-name-2>/
+        template.yaml
+        samconfig.toml
+    cdk/                            # Optional future deployment method
+      <app-name-1>/...
+    terraform/                      # Optional future deployment method
+      <app-name-1>/...
 
   libs/                             # Shared libraries (reusable, stable APIs)
     <lib-name-1>/
@@ -132,7 +141,7 @@ apps-repo/
 
 ### deploy/ - deployment wiring, not service code
 
-Purpose: Define app-level resources and wiring:
+Purpose: Define app-level resources and wiring across one or more deployable apps:
 
 - Lambda functions, triggers, permissions
 - EventBridge schedules
@@ -144,8 +153,15 @@ Why it matters:
 Keeping deployment wiring separate:
 
 - prevents mixing infra definitions into service code
-- makes it easy for CI to run `sam build/deploy` consistently
-- allows multiple services to be deployed as a single "app stack"
+- makes it easy for CI to run deployment pipelines consistently (SAM now, other methods later)
+- allows multiple services to be deployed as one app stack or multiple app stacks
+
+Recommended organization:
+
+- group by deployment method first (`deploy/sam`, `deploy/cdk`, `deploy/terraform`, etc.)
+- then group by app name under each method (`deploy/sam/<app-name>/...`)
+- keep all deployment-only artifacts here (templates, params, env/profiles, stack configs)
+- for a single-app repo, `deploy/template.yaml` is acceptable initially; move to method/app subfolders when more apps/methods are introduced
 
 Rule: `deploy/` should reference service folders via paths (e.g., `CodeUri`) but must not contain service logic.
 
@@ -265,7 +281,7 @@ These three rules preserve modularity and keep the repo maintainable.
 1. Create folder: `services/lambdas/<name>/`
 2. Add entrypoint: `cmd/handler/main.go`
 3. Put logic in: `internal/`
-4. Add wiring in: `deploy/template.yaml`
+4. Add wiring in the target app under `deploy/` (for example `deploy/sam/<app-name>/template.yaml`)
 
 ### Add a new ECS service
 
@@ -273,7 +289,7 @@ These three rules preserve modularity and keep the repo maintainable.
 2. Add entrypoint: `cmd/worker/main.go`
 3. Put logic in: `internal/`
 4. Add Dockerfile: `deploy/Dockerfile`
-5. Add wiring in: `deploy/template.yaml` (task def + schedule)
+5. Add wiring in the target app under `deploy/` (for example `deploy/sam/<app-name>/template.yaml`) for task defs/schedules
 
 ## Why we keep this format consistent
 
@@ -306,6 +322,7 @@ A standard structure makes it harder to accidentally:
 - `docs/` for ADRs and runbooks
 - `tools/` for linters, codegen utilities
 - CI checks to enforce no cross-service imports
+- additional deployment methods under `deploy/` (CDK/Terraform/other)
 
 ## Summary
 
@@ -314,6 +331,6 @@ This folder structure is designed to be:
 - Clear: what runs vs what's shared vs what's deployment wiring
 - Modular: shared libs only in `libs/`, private code in each service's `internal/`
 - Scalable: handles many services without becoming chaotic
-- CI-friendly: predictable build/deploy patterns for SAM and Docker
+- CI-friendly: predictable build/deploy patterns with support for multiple deployment methods over time
 
 Use this structure for any backend apps repo that contains serverless + containerized workloads.

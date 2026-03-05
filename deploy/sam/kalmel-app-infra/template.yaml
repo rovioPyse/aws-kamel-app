@@ -1,0 +1,63 @@
+﻿AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Kamel Application Stack
+
+Parameters:
+  Environment:
+    Type: String
+    AllowedValues: [dev, prod]
+
+Globals:
+  Function:
+    Runtime: provided.al2023
+    Handler: bootstrap
+    Timeout: 30
+    MemorySize: 256
+    Architectures:
+      - x86_64
+    VpcConfig:
+      SecurityGroupIds:
+        - !ImportValue
+            Fn::Sub: KamelLambdaSG-${Environment}
+      SubnetIds:
+        - !ImportValue
+            Fn::Sub: KamelPrivateSubnet1-${Environment}
+        - !ImportValue
+            Fn::Sub: KamelPrivateSubnet2-${Environment}
+
+Resources:
+  LatestStateWriterFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: makefile
+    Properties:
+      FunctionName: !Sub kamel-latest-state-writer-${Environment}
+      CodeUri: ../../../services/lambdas/latest-state-writer/
+      Handler: bootstrap
+      Environment:
+        Variables:
+          TABLE_NAME: !ImportValue
+            Fn::Sub: KamelLatestTable-${Environment}
+          APP_NAME: latest-state-writer
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !ImportValue
+              Fn::Sub: KamelLatestTable-${Environment}
+
+  AlarmProcessorFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: makefile
+    Properties:
+      FunctionName: !Sub kamel-alarm-processor-${Environment}
+      CodeUri: ../../../services/lambdas/alarm-processor/
+      Handler: bootstrap
+      Environment:
+        Variables:
+          TABLE_NAME: !ImportValue
+            Fn::Sub: KamelAlarmsTable-${Environment}
+          APP_NAME: alarm-processor
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !ImportValue
+              Fn::Sub: KamelAlarmsTable-${Environment}

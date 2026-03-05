@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 
-	"aws-kamel-app/services/lambdas/alarm-processor/internal/processor"
+	"alarm-processor/internal/processor"
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
 )
