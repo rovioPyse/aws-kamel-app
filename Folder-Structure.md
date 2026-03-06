@@ -41,14 +41,22 @@ aws-kamel-app/
         internal/
           processor/
             processor.go
+
+    ecs/
+      scheduled-telemetry-processor/
+        go.mod
+        cmd/
+          worker/
+            main.go
 ```
 
 ## Module model
 
-Each Lambda service is an independent Go module.
+Each service is an independent Go module.
 
 - `services/lambdas/latest-state-writer/go.mod`
 - `services/lambdas/alarm-processor/go.mod`
+- `services/ecs/scheduled-telemetry-processor/go.mod`
 
 Implications:
 
@@ -70,12 +78,15 @@ This template references service code using `CodeUri` paths:
 
 Build is delegated to each service Makefile via `BuildMethod: makefile`.
 
+Note: the ECS service is not wired in this SAM app today.
+
 ## Service boundaries
 
 Rules we follow:
 
 - `cmd/handler/main.go` is the service entrypoint.
-- `internal/` contains service-private implementation details.
+- `cmd/worker/main.go` is the ECS service entrypoint.
+- `internal/` is optional and should be added when service-private logic exists.
 - Services must not import from other service folders.
 - Shared code should be introduced under a future `libs/` directory if reuse appears.
 
@@ -105,5 +116,6 @@ go test ./...
 If new workloads are added:
 
 - Add more Lambda modules under `services/lambdas/<name>/`.
+- Add more ECS modules under `services/ecs/<name>/`.
 - Add additional SAM apps under `deploy/sam/<app-name>/` when needed.
 - Introduce `libs/` only when code is genuinely shared across services.
