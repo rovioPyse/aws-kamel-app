@@ -1,41 +1,32 @@
 # kalmel-app-infra
 
-AWS SAM stack for Kamel Lambdas:
+SAM application for Kamel Lambda infrastructure wiring.
+
+## Scope
+
+This stack defines and deploys:
 
 - `LatestStateWriterFunction`
 - `AlarmProcessorFunction`
 
-Both functions use custom Go build steps (`BuildMethod: makefile`) from:
+Both functions are built from service-local Makefiles and use the custom runtime pattern (`provided.al2023`, `bootstrap`).
 
-- `services/lambdas/latest-state-writer`
-- `services/lambdas/alarm-processor`
+## Source wiring
 
-## Prerequisites
+- `LatestStateWriterFunction` -> `services/lambdas/latest-state-writer`
+- `AlarmProcessorFunction` -> `services/lambdas/alarm-processor`
 
-- AWS CLI configured for the target account/region
-- AWS SAM CLI installed
-- Go installed (used by Lambda Makefiles during `sam build`)
-- Docker installed (required for SAM local emulation)
+Wiring is defined in `template.yaml` using `CodeUri` relative paths.
 
-## Files
+## Stack inputs
 
-```text
-deploy/sam/kalmel-app-infra/
-  Makefile
-  README.md
-  samconfig.toml
-  template.yaml
-```
+Required parameter:
 
-## Stack parameter
+- `Environment` (`dev` or `prod`)
 
-This template requires one parameter:
+## External dependencies
 
-- `Environment`: `dev` or `prod`
-
-## Required CloudFormation exports
-
-The stack imports shared infrastructure values. These exports must exist for the selected environment:
+This stack expects existing CloudFormation exports per environment:
 
 - `KamelLambdaSG-${Environment}`
 - `KamelPrivateSubnet1-${Environment}`
@@ -43,61 +34,14 @@ The stack imports shared infrastructure values. These exports must exist for the
 - `KamelLatestTable-${Environment}`
 - `KamelAlarmsTable-${Environment}`
 
-## Build
+## Files in this folder
 
-From `deploy/sam/kalmel-app-infra`:
+- `template.yaml` - function and policy wiring
+- `samconfig.toml` - SAM default configuration
+- `Makefile` - local SAM build wrapper
+- `README.md` - this document
 
-```powershell
-make
-```
+## Notes
 
-or:
-
-```powershell
-sam build
-```
-
-## Validate
-
-```powershell
-sam validate --lint --parameter-overrides Environment=dev
-```
-
-Use `Environment=prod` when validating production configuration.
-
-## Deploy
-
-First-time guided deploy (recommended):
-
-```powershell
-sam deploy --guided --parameter-overrides Environment=dev
-```
-
-Non-guided deploy (after `samconfig.toml` is initialized):
-
-```powershell
-sam deploy --parameter-overrides Environment=dev
-```
-
-For production:
-
-```powershell
-sam deploy --parameter-overrides Environment=prod
-```
-
-Notes:
-
-- `samconfig.toml` currently sets `stack_name = "kalmel-app-infra"`.
-- `confirm_changeset = true` is enabled, so deploy asks for confirmation before execution.
-- `capabilities = "CAPABILITY_IAM"` is already configured.
-
-## Local invoke
-
-This stack does not define API events. Invoke functions directly with event files:
-
-```powershell
-sam local invoke LatestStateWriterFunction --event events/latest-state-writer.json
-sam local invoke AlarmProcessorFunction --event events/alarm-processor.json
-```
-
-If your handlers need AWS resources (DynamoDB/VPC dependencies), local invoke may require additional mocking or local endpoints.
+- The stack currently focuses on Lambda resources and does not define API Gateway routes.
+- Build output (`.aws-sam/`) is generated artifact content, not source-of-truth.

@@ -1,60 +1,34 @@
 # aws-kamel-app
 
-Backend apps repo with two Go Lambdas wired through AWS SAM:
+Backend repository for Kamel serverless services.
 
-- `latest-state-writer`
-- `alarm-processor`
+## What is in this repo
 
-## Prerequisites
+- Two Go Lambda services, each as an independent Go module:
+  - `services/lambdas/latest-state-writer`
+  - `services/lambdas/alarm-processor`
+- One SAM application that wires and deploys these Lambdas:
+  - `deploy/sam/kalmel-app-infra`
 
-- Go (1.23+)
-- AWS SAM CLI
-- Docker (required for `sam local invoke`)
+## Current architecture
 
-## Repository Layout
+- Each Lambda has its own `go.mod` and `go.sum`.
+- There is no root Go module (`go.mod` removed intentionally).
+- SAM uses function-level makefile builds (`BuildMethod: makefile`).
+- Lambda source wiring is done via `CodeUri` from the SAM template.
 
-- `services/lambdas/latest-state-writer` - Lambda source
-- `services/lambdas/alarm-processor` - Lambda source
-- `deploy/template.yaml` - SAM stack wiring
+## Key paths
 
-## Run Locally
+- SAM template: `deploy/sam/kalmel-app-infra/template.yaml`
+- SAM config: `deploy/sam/kalmel-app-infra/samconfig.toml`
+- SAM app docs: `deploy/sam/kalmel-app-infra/README.md`
+- Repo structure reference: `Folder-Structure.md`
 
-1. Create sample event files:
+## Environment model
 
-```powershell
-New-Item -ItemType Directory -Force events | Out-Null
-'{}' | Set-Content events/latest-state-writer.json
-'{"id":"1","source":"demo","detail-type":"Scheduled Event","detail":{}}' | Set-Content events/alarm-processor.json
-```
+The SAM stack is environment-parameterized with:
 
-2. Invoke each Lambda locally:
+- `Environment=dev`
+- `Environment=prod`
 
-```powershell
-sam local invoke LatestStateWriterFunction --template deploy/template.yaml --event events/latest-state-writer.json
-sam local invoke AlarmProcessorFunction --template deploy/template.yaml --event events/alarm-processor.json
-```
-
-## Test
-
-Run all Go tests:
-
-```powershell
-go test ./...
-```
-
-## Build
-
-Build the full SAM application:
-
-```powershell
-sam build --template deploy/template.yaml
-```
-
-Build only one Lambda:
-
-```powershell
-sam build LatestStateWriterFunction --template deploy/template.yaml
-sam build AlarmProcessorFunction --template deploy/template.yaml
-```
-
-Artifacts are written to `.aws-sam/build/` (or your configured SAM build directory).
+The stack imports shared network/table resources via CloudFormation exports for the selected environment.
